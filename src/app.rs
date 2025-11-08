@@ -54,6 +54,7 @@ pub struct Application<Window> {
     window: Window,
     width: u16,
     height: u16,
+    ratio: f32,
 }
 
 impl<W: Window> Application<W> {
@@ -62,19 +63,33 @@ impl<W: Window> Application<W> {
         let width = args.width;
         let height = args.height;
         let window = W::init(width, height);
+        let ratio_w = image.width() as f32 / width as f32;
+        let ratio_h = image.height() as f32 / height as f32;
+        let mut ratio = 1.0;
+
+        if ratio_w > 1.0 || ratio_h > 1.0 {
+            if ratio_w > ratio_h {
+                ratio = ratio_w;
+            } else {
+                ratio = ratio_h;
+            }
+        }
 
         Self {
             image,
             window,
             width,
             height,
+            ratio,
         }
     }
     fn present(&self) -> Frame {
-        let max_w = self.width.into();
-        let max_h = self.height.into();
-        let cropped: Image = imageops::crop_imm(&self.image, 0, 0, max_w, max_h).to_image();
-        let image: RawImage = cropped.into();
+        let new_w = (self.image.width() as f32 / self.ratio) as u32;
+        let new_h = (self.image.height() as f32 / self.ratio) as u32;
+
+        let resized: Image =
+            imageops::resize(&self.image, new_w, new_h, imageops::FilterType::Nearest);
+        let image: RawImage = resized.into();
 
         Frame {
             background: BACKGROUND_COLOR,
